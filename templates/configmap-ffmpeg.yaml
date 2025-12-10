@@ -7,8 +7,9 @@ metadata:
     app.kubernetes.io/component: transcoder
 data:
   ffmpegOptions: {{ .Values.ffmpeg.ffmpegOptions | quote }}
-  {{- if .Values.udpInput.enabled }}
-  inputSourceUrl: {{ printf "udp://0.0.0.0:%d" (int .Values.udpInput.port) | quote }}
+  {{- if .Values.cubemap.enabled }}
+  # Read from Cubemap HTTP endpoint (allows graceful reconnection during rollouts)
+  inputSourceUrl: {{ printf "http://%s-cubemap:%d/stream.ts" (include "live-stream-packager.fullname" .) (int .Values.cubemap.httpPort) | quote }}
   {{- else }}
   inputSourceUrl: {{ .Values.ffmpeg.inputSourceUrl | quote }}
   {{- end }}

@@ -1,0 +1,39 @@
+{{- if .Values.cubemap.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}-cubemap
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubemap
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: cubemap
+  ports:
+    - name: http
+      port: {{ .Values.cubemap.httpPort }}
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}-cubemap-udp
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubemap-udp
+spec:
+  type: LoadBalancer
+  loadBalancerIP: {{ .Values.cubemap.loadBalancerIP }}
+  selector:
+    {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: cubemap
+  ports:
+    - name: udp-input
+      port: {{ .Values.cubemap.udpPort }}
+      targetPort: udp-input
+      protocol: UDP
+{{- end }}

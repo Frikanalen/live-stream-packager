@@ -4,12 +4,12 @@ fullnameOverride: ""
 image:
   ffmpeg:
     repository: jrottenberg/ffmpeg
-    tag: 4.1-alpine
+    tag: 8-alpine
     pullPolicy: IfNotPresent
 
   packager:
     repository: google/shaka-packager
-    tag: release-v2.4.2
+    tag: v3.4.2
     pullPolicy: IfNotPresent
 
   nginx:
@@ -17,9 +17,15 @@ image:
     tag: latest
     pullPolicy: IfNotPresent
 
+  cubemap:
+    repository: ghcr.io/frikanalen/cubemap
+    tag: latest
+    pullPolicy: IfNotPresent
+
 # ffmpeg / input pipeline configuration
 ffmpeg:
   ffmpegOptions: "-probesize 100M -threads 10 -strict -2"
+  # When cubemap.enabled, this is overridden to read from Cubemap HTTP
   inputSourceUrl: "http://192.168.3.1:9094/frikanalen.ts"
   encodingOptions: |
     -pix_fmt yuv420p -filter_complex [0:v]split=2[s1][s2]
@@ -73,11 +79,13 @@ service:
   type: ClusterIP
   port: 80
 
-# Optional UDP input for receiving external streams
-udpInput:
+# Cubemap UDP reflector - receives UDP and serves HTTP for graceful rollouts
+cubemap:
   enabled: true
-  port: 5004
+  udpPort: 5004
+  httpPort: 9094
   loadBalancerIP: "192.168.3.91"
+  backlogSize: 10485760  # 10MB backlog
 
 ingress:
   enabled: true
