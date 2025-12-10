@@ -17,9 +17,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
-      - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-      - name: Package and push chart
-        run: |
-          helm package .
-          helm push live-stream-packager-*.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+      - run: helm package . && helm push *.tgz oci://${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER,,}/charts
