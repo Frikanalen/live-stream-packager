@@ -72,17 +72,32 @@ spec:
                 configMapKeyRef:
                   name: {{ include "live-stream-packager.fullname" . }}-shaka
                   key: packagerArguments
+            # shaka-packager depends on being able to link between tmp and output directories
+            # so this is how we hack it all together
+            - name: TMPDIR
+              value: /stream
           volumeMounts:
             - name: shared-data
               mountPath: /stream
+          startupProbe:
+            exec:
+              command: ["/bin/sh", "-c", "pgrep -x packager && test -f {{ .Values.health.playlistPath }}"]
+            periodSeconds: 5
+            failureThreshold: {{ .Values.health.startupFailureThreshold }}
           livenessProbe:
             exec:
               command:
                 - /bin/sh
                 - -c
-                - "pgrep -x packager > /dev/null"
-            initialDelaySeconds: 30
+                - |
+                  pgrep -x packager > /dev/null || exit 1
+                  [ -f {{ .Values.health.playlistPath }} ] && [ $(($(date +%s) - $(stat -c %Y {{ .Values.health.playlistPath }}))) -lt {{ .Values.health.maxAgeSeconds }} ]
             periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "test -f {{ .Values.health.playlistPath }}"]
+            periodSeconds: 5
             failureThreshold: 3
           resources:
             {{- with .Values.resources.packager }}
@@ -102,47 +117,14 @@ spec:
             - name: http
               containerPort: 80
 
-          readinessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  # Ready only once the first playlist is produced.
-                  FILE="{{ .Values.health.playlistPath }}"
-                  if [ ! -f "$FILE" ]; then
-                    exit 1
-                  fi
-                  exit 0
-            initialDelaySeconds: {{ .Values.health.readinessInitialDelay }}
-            periodSeconds: 5
-            failureThreshold: 3
-
           livenessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  # The packager updates index.m3u8 continuously. If it stops changing
-                  # for too long, the pipeline is unhealthy and needs a restart.
-                  FILE="{{ .Values.health.playlistPath }}"
-                  MAX_AGE={{ .Values.health.maxAgeSeconds }}
-
-                  if [ ! -f "$FILE" ]; then
-                    exit 1
-                  fi
-
-                  AGE=$(( $(date +%s) - $(stat -c %Y "$FILE") ))
-
-                  if [ "$AGE" -ge "$MAX_AGE" ]; then
-                    exit 1
-                  fi
-
-                  exit 0
-            initialDelaySeconds: {{ .Values.health.livenessInitialDelay }}
+            tcpSocket:
+              port: 80
             periodSeconds: 10
-            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 5
           resources:
             {{- with .Values.resources.nginx }}
             {{- toYaml . | nindent 12 }}

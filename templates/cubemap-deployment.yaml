@@ -42,18 +42,16 @@ spec:
               mountPath: /etc/cubemap
           livenessProbe:
             httpGet:
-              path: /stream.ts
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /stream.ts
+              path: /health
               port: http
             initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 2
             periodSeconds: 5
-            failureThreshold: 3
 
       {{- with .Values.nodeSelector }}
       nodeSelector:

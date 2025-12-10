@@ -68,12 +68,11 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Health checks based on index.m3u8 freshness
+# Health checks for shaka-packager
 health:
-  playlistPath: "/usr/share/nginx/html/index.m3u8"
+  playlistPath: "/stream/index.m3u8"
   maxAgeSeconds: 60
-  readinessInitialDelay: 10
-  livenessInitialDelay: 30
+  startupFailureThreshold: 60  # 60 * 5s = 5 min max startup time
 
 service:
   type: ClusterIP
