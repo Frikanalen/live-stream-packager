@@ -1,0 +1,19 @@
+{{- if .Values.udpInput.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}-udp
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: udp-input
+spec:
+  type: LoadBalancer
+  loadBalancerIP: {{ .Values.udpInput.loadBalancerIP }}
+  selector:
+    {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: udp-input
+      port: {{ .Values.udpInput.port }}
+      targetPort: {{ .Values.udpInput.port }}
+      protocol: UDP
+{{- end }}

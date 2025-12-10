@@ -30,6 +30,12 @@ spec:
           image: "{{ .Values.image.ffmpeg.repository }}:{{ .Values.image.ffmpeg.tag }}"
           imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
           command: ["/bin/sh", "-c", "sleep 15s; ffmpeg $FFMPEG_OPTIONS -i $SOURCE_URL $ENCODING_OPTIONS"]
+          {{- if .Values.udpInput.enabled }}
+          ports:
+            - name: udp-input
+              containerPort: {{ .Values.udpInput.port }}
+              protocol: UDP
+          {{- end }}
           env:
             - name: ENCODING_OPTIONS
               valueFrom:

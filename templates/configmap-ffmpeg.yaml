@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/component: transcoder
 data:
   ffmpegOptions: {{ .Values.ffmpeg.ffmpegOptions | quote }}
+  {{- if .Values.udpInput.enabled }}
+  inputSourceUrl: {{ printf "udp://0.0.0.0:%d" (int .Values.udpInput.port) | quote }}
+  {{- else }}
   inputSourceUrl: {{ .Values.ffmpeg.inputSourceUrl | quote }}
+  {{- end }}
   encodingOptions: |
 {{ .Values.ffmpeg.encodingOptions | indent 4 }}
