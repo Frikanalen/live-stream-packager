@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: transcoder
+data:
+  ffmpegOptions: {{ .Values.ffmpeg.ffmpegOptions | quote }}
+  inputSourceUrl: {{ .Values.ffmpeg.inputSourceUrl | quote }}
+  encodingOptions: |
+{{ .Values.ffmpeg.encodingOptions | indent 4 }}

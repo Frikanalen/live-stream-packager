@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: packager
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "live-stream-packager.selectorLabels" . | nindent 6 }}
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        {{- include "live-stream-packager.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: packager
+    spec:
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: {{ include "live-stream-packager.fullname" . }}-nginx
+
+      containers:
+        # ffmpeg transcoder
+        - name: ffmpeg-transcoder
+          image: "{{ .Values.image.ffmpeg.repository }}:{{ .Values.image.ffmpeg.tag }}"
+          imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
+          command: ["/bin/sh", "-c", "sleep 15s; ffmpeg $FFMPEG_OPTIONS -i $SOURCE_URL $ENCODING_OPTIONS"]
+          env:
+            - name: ENCODING_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
+                  key: encodingOptions
+            - name: SOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
+                  key: inputSourceUrl
+            - name: FFMPEG_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
+                  key: ffmpegOptions
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -x ffmpeg > /dev/null"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- with .Values.resources.ffmpeg }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+        # Shaka packager
+        - name: shaka-packager
+          image: "{{ .Values.image.packager.repository }}:{{ .Values.image.packager.tag }}"
+          imagePullPolicy: {{ .Values.image.packager.pullPolicy }}
+          command: ["/bin/sh", "-c", "packager $ARGUMENTS"]
+          workingDir: /stream
+          env:
+            - name: ARGUMENTS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "live-stream-packager.fullname" . }}-shaka
+                  key: packagerArguments
+          volumeMounts:
+            - name: shared-data
+              mountPath: /stream
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -x packager > /dev/null"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- with .Values.resources.packager }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+        # Nginx web server
+        - name: nginx-web
+          image: "{{ .Values.image.nginx.repository }}:{{ .Values.image.nginx.tag }}"
+          imagePullPolicy: {{ .Values.image.nginx.pullPolicy }}
+          volumeMounts:
+            - name: shared-data
+              mountPath: /usr/share/nginx/html
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+          ports:
+            - name: http
+              containerPort: 80
+
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  # Ready only once the first playlist is produced.
+                  FILE="{{ .Values.health.playlistPath }}"
+                  if [ ! -f "$FILE" ]; then
+                    exit 1
+                  fi
+                  exit 0
+            initialDelaySeconds: {{ .Values.health.readinessInitialDelay }}
+            periodSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  # The packager updates index.m3u8 continuously. If it stops changing
+                  # for too long, the pipeline is unhealthy and needs a restart.
+                  FILE="{{ .Values.health.playlistPath }}"
+                  MAX_AGE={{ .Values.health.maxAgeSeconds }}
+
+                  if [ ! -f "$FILE" ]; then
+                    exit 1
+                  fi
+
+                  AGE=$(( $(date +%s) - $(stat -c %Y "$FILE") ))
+
+                  if [ "$AGE" -ge "$MAX_AGE" ]; then
+                    exit 1
+                  fi
+
+                  exit 0
+            initialDelaySeconds: {{ .Values.health.livenessInitialDelay }}
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- with .Values.resources.nginx }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
