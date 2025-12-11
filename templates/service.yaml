@@ -9,6 +9,7 @@ spec:
   type: {{ .Values.service.type }}
   selector:
     {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: packager
   ports:
     - name: http
       port: {{ .Values.service.port }}
