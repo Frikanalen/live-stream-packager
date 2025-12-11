@@ -30,26 +30,27 @@ ffmpeg:
   encodingOptions: |
     -pix_fmt yuv420p -filter_complex [0:v]split=2[s1][s2]
 
-    -map 0:1 -codec:a aac -f mpegts udp://127.0.0.1:9000
+    -map 0:1 -codec:a libfdk_aac -f mpegts udp://127.0.0.1:9000
 
-    -map [s1] -crf 25 -b:v 1000k -maxrate:v:0 1500k
-      -profile:v baseline
-      -deadline realtime -codec:v libx264 -preset fast
+    -map [s1] -b:v 1000k -maxrate:v 1500k -bufsize:v 2000k
+      -profile:v baseline -preset fast -tune zerolatency
+      -g 100 -sc_threshold 0 -codec:v libx264
       -f mpegts udp://127.0.0.1:9002
 
-    -map [s2] -crf 25 -b:v 2500k -maxrate:v:0 2500k -speed 7
-      -deadline realtime -codec:v libx264 -preset fast
+    -map [s2] -b:v 4000k -maxrate:v 5000k -bufsize:v 8000k
+      -preset fast -tune zerolatency
+      -g 100 -sc_threshold 0 -codec:v libx264
       -f mpegts udp://127.0.0.1:9003
 
 # Shaka packager configuration
 shaka:
   packagerArguments: |
-    in=udp://0.0.0.0:9000,stream=audio,init_segment=livehd-audio.mp4,segment_template=livehd-audio-$Number$.mp4
-    in=udp://0.0.0.0:9002,stream=video,bw=1400000,init_segment=livehd-video2.mp4,template=livehd-video2-$Number$.mp4
-    in=udp://0.0.0.0:9003,stream=video,bw=3000000,init_segment=livehd-video3.mp4,template=livehd-video3-$Number$.mp4
-    --mpd_output index.mpd --dump_stream_info --min_buffer_time=10
+    in=udp://0.0.0.0:9000?buffer_size=212992,stream=audio,init_segment=livehd-audio.mp4,segment_template=livehd-audio-$Number$.mp4
+    in=udp://0.0.0.0:9002?buffer_size=212992,stream=video,bw=1400000,init_segment=livehd-video2.mp4,template=livehd-video2-$Number$.mp4
+    in=udp://0.0.0.0:9003?buffer_size=212992,stream=video,bw=3000000,init_segment=livehd-video3.mp4,template=livehd-video3-$Number$.mp4
+    --mpd_output index.mpd --dump_stream_info --min_buffer_time=12
     --hls_playlist_type LIVE --hls_master_playlist_output index.m3u8
-    --time_shift_buffer_depth=300 --segment_duration=3 --io_block_size 65536
+    --time_shift_buffer_depth=300 --segment_duration=2 --io_block_size 65536
 
 replicaCount: 1
 
