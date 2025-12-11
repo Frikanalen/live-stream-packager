@@ -17,5 +17,5 @@ data:
 
     # UDP input - receives MPEG-TS from external source
     # Serves via HTTP for ffmpeg to consume (allows reconnection during rollouts)
-    stream /stream.ts src=udp://@:{{ .Values.cubemap.udpPort }} backlog_size={{ int .Values.cubemap.backlogSize }}
+    stream /stream.ts src=udp://@:{{ .Values.cubemap.udpPort }}
 {{- end }}
