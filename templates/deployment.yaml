@@ -29,7 +29,10 @@ spec:
         - name: ffmpeg-transcoder
           image: "{{ .Values.image.ffmpeg.repository }}:{{ .Values.image.ffmpeg.tag }}"
           imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
-          command: ["/bin/sh", "-c", "sleep 15s; ffmpeg $FFMPEG_OPTIONS -i $SOURCE_URL $ENCODING_OPTIONS"]
+          command: ["/bin/sh", "-c", "sleep 15s; echo \"DEBUG ENCODING: $ENCODING_OPTIONS\" >&2; ffmpeg -progress pipe:2 -stats $FFMPEG_OPTIONS -i $SOURCE_URL $(echo $ENCODING_OPTIONS | tr '\\n' ' ')"]
+          volumeMounts:
+            - name: shared-data
+              mountPath: /stream
           env:
             - name: ENCODING_OPTIONS
               valueFrom:
@@ -82,6 +85,7 @@ spec:
           startupProbe:
             exec:
               command: ["/bin/sh", "-c", "pgrep -x packager && test -f {{ .Values.health.playlistPath }}"]
+            initialDelaySeconds: 20
             periodSeconds: 5
             failureThreshold: {{ .Values.health.startupFailureThreshold }}
           livenessProbe:
@@ -122,9 +126,12 @@ spec:
               port: 80
             periodSeconds: 10
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /index.m3u8
               port: 80
+            initialDelaySeconds: 25
             periodSeconds: 5
+            failureThreshold: 3
           resources:
             {{- with .Values.resources.nginx }}
             {{- toYaml . | nindent 12 }}
