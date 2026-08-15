@@ -15,7 +15,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
       - run: helm package . && helm push *.tgz oci://${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER,,}/charts
