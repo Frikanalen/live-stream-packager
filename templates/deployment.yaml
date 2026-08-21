@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/component: packager
 spec:
   replicas: {{ .Values.replicaCount }}
+  # Every pod has its own HLS origin in emptyDir. Overlapping generations can
+  # serve a manifest from one origin and a segment from another.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "live-stream-packager.selectorLabels" . | nindent 6 }}
@@ -16,123 +20,148 @@ spec:
       labels:
         {{- include "live-stream-packager.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: packager
+      annotations:
+        checksum/nginx-config: {{ include (print $.Template.BasePath "/configmap-nginx.yaml") . | sha256sum }}
+        checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
     spec:
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: shared-data
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: {{ .Values.storage.sizeLimit }}
         - name: nginx-config
           configMap:
             name: {{ include "live-stream-packager.fullname" . }}-nginx
+        - name: scripts
+          configMap:
+            name: {{ include "live-stream-packager.fullname" . }}-scripts
+            defaultMode: 0555
 
       containers:
-        # ffmpeg transcoder
         - name: ffmpeg-transcoder
-          image: "{{ .Values.image.ffmpeg.repository }}:{{ .Values.image.ffmpeg.tag }}"
+          image: {{ include "live-stream-packager.image" .Values.image.ffmpeg | quote }}
           imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
-          command: ["/bin/sh", "-c", "sleep 15s; echo \"DEBUG ENCODING: $ENCODING_OPTIONS\" >&2; ffmpeg -progress pipe:2 -stats $FFMPEG_OPTIONS -i $SOURCE_URL $(echo $ENCODING_OPTIONS | tr '\\n' ' ')"]
+          command: ["ffmpeg"]
+          args:
+            {{- range .Values.ffmpeg.inputOptions }}
+            - {{ . | quote }}
+            {{- end }}
+            - -i
+            - {{ include "live-stream-packager.ffmpegInputUrl" . | quote }}
+            {{- range .Values.ffmpeg.encodingOptions }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - name: PLAYLIST_PATH
+              value: {{ .Values.health.mediaPlaylistPath | quote }}
+            - name: PLAYLIST_MAX_AGE_SECONDS
+              value: {{ .Values.health.maxAgeSeconds | quote }}
+            - name: HEALTH_STATE_PATH
+              value: /tmp/ffmpeg-playlist-health.state
           volumeMounts:
             - name: shared-data
               mountPath: /stream
-          env:
-            - name: ENCODING_OPTIONS
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
-                  key: encodingOptions
-            - name: SOURCE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
-                  key: inputSourceUrl
-            - name: FFMPEG_OPTIONS
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "live-stream-packager.fullname" . }}-ffmpeg
-                  key: ffmpegOptions
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
           livenessProbe:
             exec:
-              command:
-                - /bin/sh
-                - -c
-                - "pgrep -x ffmpeg > /dev/null"
-            initialDelaySeconds: 30
+              command: ["/scripts/playlist-healthcheck.sh", "live"]
+            initialDelaySeconds: 60
+            timeoutSeconds: 3
             periodSeconds: 10
-            failureThreshold: 3
+            failureThreshold: {{ .Values.health.failureThreshold }}
           resources:
-            {{- with .Values.resources.ffmpeg }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            {{- toYaml .Values.resources.ffmpeg | nindent 12 }}
 
-        # Shaka packager
         - name: shaka-packager
-          image: "{{ .Values.image.packager.repository }}:{{ .Values.image.packager.tag }}"
+          image: {{ include "live-stream-packager.image" .Values.image.packager | quote }}
           imagePullPolicy: {{ .Values.image.packager.pullPolicy }}
-          command: ["/bin/sh", "-c", "packager $ARGUMENTS"]
+          command: ["/scripts/run-packager.sh"]
+          args:
+            {{- range .Values.shaka.arguments }}
+            - {{ . | quote }}
+            {{- end }}
           workingDir: /stream
           env:
-            - name: ARGUMENTS
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "live-stream-packager.fullname" . }}-shaka
-                  key: packagerArguments
-            # shaka-packager depends on being able to link between tmp and output directories
-            # so this is how we hack it all together
             - name: TMPDIR
               value: /stream
+            - name: SEGMENT_DURATION_SECONDS
+              value: {{ .Values.shaka.segmentDurationSeconds | quote }}
+            - name: SEGMENT_RETENTION_MINUTES
+              value: {{ .Values.shaka.segmentRetentionMinutes | quote }}
+            - name: PLAYLIST_PATH
+              value: {{ .Values.health.mediaPlaylistPath | quote }}
+            - name: PLAYLIST_MAX_AGE_SECONDS
+              value: {{ .Values.health.maxAgeSeconds | quote }}
+            - name: HEALTH_STATE_PATH
+              value: /tmp/packager-playlist-health.state
           volumeMounts:
             - name: shared-data
               mountPath: /stream
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
           startupProbe:
             exec:
-              command: ["/bin/sh", "-c", "pgrep -x packager && test -f {{ .Values.health.playlistPath }}"]
-            initialDelaySeconds: 20
+              command: ["/scripts/playlist-healthcheck.sh", "ready"]
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
             periodSeconds: 5
             failureThreshold: {{ .Values.health.startupFailureThreshold }}
           livenessProbe:
             exec:
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  pgrep -x packager > /dev/null || exit 1
-                  [ -f {{ .Values.health.playlistPath }} ] && [ $(($(date +%s) - $(stat -c %Y {{ .Values.health.playlistPath }}))) -lt {{ .Values.health.maxAgeSeconds }} ]
+              command: ["/scripts/playlist-healthcheck.sh", "live"]
+            timeoutSeconds: 3
             periodSeconds: 10
-            failureThreshold: 3
+            failureThreshold: {{ .Values.health.failureThreshold }}
           readinessProbe:
             exec:
-              command: ["/bin/sh", "-c", "test -f {{ .Values.health.playlistPath }}"]
+              command: ["/scripts/playlist-healthcheck.sh", "ready"]
+            timeoutSeconds: 3
             periodSeconds: 5
-            failureThreshold: 3
+            failureThreshold: {{ .Values.health.failureThreshold }}
           resources:
-            {{- with .Values.resources.packager }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            {{- toYaml .Values.resources.packager | nindent 12 }}
 
-        # Nginx web server
         - name: nginx-web
-          image: "{{ .Values.image.nginx.repository }}:{{ .Values.image.nginx.tag }}"
+          image: {{ include "live-stream-packager.image" .Values.image.nginx | quote }}
           imagePullPolicy: {{ .Values.image.nginx.pullPolicy }}
           volumeMounts:
             - name: shared-data
               mountPath: /usr/share/nginx/html
+              readOnly: true
             - name: nginx-config
               mountPath: /etc/nginx/conf.d
+              readOnly: true
           ports:
             - name: http
               containerPort: 80
-
           livenessProbe:
             tcpSocket:
-              port: 80
+              port: http
+            timeoutSeconds: 3
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /index.m3u8
-              port: 80
-            initialDelaySeconds: 25
+              port: http
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
             periodSeconds: 5
-            failureThreshold: 3
+            failureThreshold: {{ .Values.health.failureThreshold }}
           resources:
-            {{- with .Values.resources.nginx }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            {{- toYaml .Values.resources.nginx | nindent 12 }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -28,6 +28,9 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerIP: {{ .Values.cubemap.loadBalancerIP }}
+  # Cubemap readiness represents input freshness. Keep UDP routable while it
+  # is unready so a returning source can make it ready again.
+  publishNotReadyAddresses: true
   selector:
     {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: cubemap

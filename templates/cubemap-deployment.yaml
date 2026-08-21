@@ -19,15 +19,22 @@ spec:
       labels:
         {{- include "live-stream-packager.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: cubemap
+      annotations:
+        checksum/cubemap-config: {{ include (print $.Template.BasePath "/configmap-cubemap.yaml") . | sha256sum }}
+        checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
     spec:
       volumes:
         - name: cubemap-config
           configMap:
             name: {{ include "live-stream-packager.fullname" . }}-cubemap
+        - name: scripts
+          configMap:
+            name: {{ include "live-stream-packager.fullname" . }}-scripts
+            defaultMode: 0555
 
       containers:
         - name: cubemap
-          image: "{{ .Values.image.cubemap.repository }}:{{ .Values.image.cubemap.tag }}"
+          image: {{ include "live-stream-packager.image" .Values.image.cubemap | quote }}
           imagePullPolicy: {{ .Values.image.cubemap.pullPolicy }}
           args: ["/etc/cubemap/cubemap.config"]
           ports:
@@ -40,18 +47,29 @@ spec:
           volumeMounts:
             - name: cubemap-config
               mountPath: /etc/cubemap
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+          env:
+            - name: CUBEMAP_INPUT_MAX_AGE_SECONDS
+              value: {{ .Values.cubemap.inputMaxAgeSeconds | quote }}
           livenessProbe:
             httpGet:
               path: /health
               port: http
             initialDelaySeconds: 5
+            timeoutSeconds: 3
             periodSeconds: 10
           readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 2
+            exec:
+              command: ["/scripts/cubemap-input-healthcheck.sh"]
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
             periodSeconds: 5
+            failureThreshold: 1
+          resources:
+            {{- toYaml .Values.resources.cubemap | nindent 12 }}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:
