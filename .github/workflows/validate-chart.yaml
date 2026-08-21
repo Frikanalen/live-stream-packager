@@ -1,0 +1,51 @@
+name: Validate Helm chart
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+
+      - name: Lint
+        run: helm lint --strict .
+
+      - name: Test health and entrypoint scripts
+        run: sh tests/scripts-test.sh
+
+      - name: Render default configuration
+        run: helm template stream . --namespace default > "$RUNNER_TEMP/default.yaml"
+
+      - name: Render direct-input and non-TLS configuration
+        run: |
+          helm template stream . \
+            --namespace default \
+            --set cubemap.enabled=false \
+            --set ingress.tls.enabled=false \
+            > "$RUNNER_TEMP/direct-input.yaml"
+
+      - name: Assert safety-critical rendering
+        run: |
+          set -euo pipefail
+          rendered="$RUNNER_TEMP/default.yaml"
+          grep -q 'type: Recreate' "$rendered"
+          grep -q 'publishNotReadyAddresses: true' "$rendered"
+          grep -q -- '--hls_media_sequence_number=' "$rendered"
+          grep -q 'playlist-healthcheck.sh' "$rendered"
+          grep -q 'ghcr.io/frikanalen/cubemap@sha256:' "$rendered"
+
+          if helm template invalid . --set replicaCount=2 > /dev/null 2>&1; then
+            echo 'replicaCount=2 unexpectedly passed schema validation' >&2
+            exit 1
+          fi

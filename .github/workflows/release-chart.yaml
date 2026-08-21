@@ -1,9 +1,11 @@
-name: Release Helm Chart
+name: Publish manually tagged chart
 
 on:
+  # Release Please publishes in release-please.yaml. This remains an explicit
+  # fallback for a manually created tag and intentionally has no dispatch mode,
+  # which could otherwise republish the current Chart.yaml version.
   push:
     tags: ["v*"]
-  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -18,4 +20,11 @@ jobs:
       - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-      - run: helm package . && helm push *.tgz oci://${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER,,}/charts
+      - run: helm lint --strict .
+      - run: sh tests/scripts-test.sh
+      - run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/chart"
+          package_output=$(helm package . --destination "$RUNNER_TEMP/chart")
+          package_path=${package_output##*: }
+          helm push "$package_path" oci://${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER,,}/charts

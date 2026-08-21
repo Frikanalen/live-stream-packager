@@ -1,9 +1,3 @@
-
----
-
-## `templates/_helpers.tpl`
-
-```yaml
 {{- define "live-stream-packager.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end }}
@@ -34,3 +28,18 @@ app.kubernetes.io/name: {{ include "live-stream-packager.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{- define "live-stream-packager.image" -}}
+{{- if .digest -}}
+{{- printf "%s@%s" .repository .digest -}}
+{{- else -}}
+{{- printf "%s:%s" .repository .tag -}}
+{{- end -}}
+{{- end }}
+
+{{- define "live-stream-packager.ffmpegInputUrl" -}}
+{{- if .Values.cubemap.enabled -}}
+{{- printf "http://%s-cubemap:%d/stream.ts" (include "live-stream-packager.fullname" .) (int .Values.cubemap.httpPort) -}}
+{{- else -}}
+{{- .Values.ffmpeg.inputSourceUrl -}}
+{{- end -}}
+{{- end }}

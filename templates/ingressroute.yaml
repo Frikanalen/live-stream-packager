@@ -29,6 +29,10 @@ spec:
       services:
         - name: {{ $full }}
           port: {{ .Values.service.port }}
+  {{- if .Values.ingress.tls.enabled }}
   tls:
-    certResolver: {{ .Values.ingress.tls.certResolver }}
+    {{- with .Values.ingress.tls.certResolver }}
+    certResolver: {{ . }}
+    {{- end }}
+  {{- end }}
 {{- end }}
