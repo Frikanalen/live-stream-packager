@@ -71,27 +71,29 @@ if sh "$repo_dir/scripts/cubemap-input-healthcheck.sh"; then
   exit 1
 fi
 
-packager_dir="$test_dir/packager"
-mkdir -p "$packager_dir/bin" "$packager_dir/output"
-cat > "$packager_dir/bin/packager" <<'EOF'
+ffmpeg_dir="$test_dir/ffmpeg"
+mkdir -p "$ffmpeg_dir/bin" "$ffmpeg_dir/output"
+cat > "$ffmpeg_dir/bin/ffmpeg" <<'EOF'
 #!/bin/sh
-printf '%s\n' "$@" > "$PACKAGER_ARGS_FILE"
+printf '%s\n' "$@" > "$FFMPEG_ARGS_FILE"
 EOF
-chmod 0755 "$packager_dir/bin/packager"
-printf 'stale manifest\n' > "$packager_dir/output/index.m3u8"
-printf 'stale manifest\n' > "$packager_dir/output/audio.m3u8"
+chmod 0755 "$ffmpeg_dir/bin/ffmpeg"
+printf 'stale manifest\n' > "$ffmpeg_dir/output/index.m3u8"
+printf 'stale manifest\n' > "$ffmpeg_dir/output/audio.m3u8"
+printf 'stale init\n' > "$ffmpeg_dir/output/audio-init.mp4"
+printf 'stale segment\n' > "$ffmpeg_dir/output/audio-1.m4s"
 
-OUTPUT_DIR="$packager_dir/output"
-SEGMENT_DURATION_SECONDS=2
-SEGMENT_RETENTION_MINUTES=15
-PACKAGER_ARGS_FILE="$packager_dir/arguments"
-PATH="$packager_dir/bin:$PATH"
-export OUTPUT_DIR SEGMENT_DURATION_SECONDS SEGMENT_RETENTION_MINUTES PACKAGER_ARGS_FILE PATH
+OUTPUT_DIR="$ffmpeg_dir/output"
+FFMPEG_ARGS_FILE="$ffmpeg_dir/arguments"
+PATH="$ffmpeg_dir/bin:$PATH"
+export OUTPUT_DIR FFMPEG_ARGS_FILE PATH
 
-sh "$repo_dir/scripts/run-packager.sh" --hls_playlist_type=LIVE
-[ ! -e "$packager_dir/output/index.m3u8" ]
-[ ! -e "$packager_dir/output/audio.m3u8" ]
-grep -q '^--hls_media_sequence_number=' "$PACKAGER_ARGS_FILE"
-grep -q '^--start_segment_number=' "$PACKAGER_ARGS_FILE"
+sh "$repo_dir/scripts/run-ffmpeg.sh" -hls_start_number_source epoch
+[ ! -e "$ffmpeg_dir/output/index.m3u8" ]
+[ ! -e "$ffmpeg_dir/output/audio.m3u8" ]
+[ ! -e "$ffmpeg_dir/output/audio-init.mp4" ]
+[ ! -e "$ffmpeg_dir/output/audio-1.m4s" ]
+grep -q '^-hls_start_number_source$' "$FFMPEG_ARGS_FILE"
+grep -q '^epoch$' "$FFMPEG_ARGS_FILE"
 
 echo 'script tests passed'

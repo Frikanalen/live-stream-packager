@@ -4,7 +4,7 @@
   "required": [
     "image",
     "ffmpeg",
-    "shaka",
+    "hls",
     "replicaCount",
     "resources",
     "storage",
@@ -21,10 +21,9 @@
     "image": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ffmpeg", "packager", "nginx", "cubemap"],
+      "required": ["ffmpeg", "nginx", "cubemap"],
       "properties": {
         "ffmpeg": { "$ref": "#/definitions/image" },
-        "packager": { "$ref": "#/definitions/image" },
         "nginx": { "$ref": "#/definitions/image" },
         "cubemap": { "$ref": "#/definitions/image" }
       }
@@ -46,18 +45,15 @@
         }
       }
     },
-    "shaka": {
+    "hls": {
       "type": "object",
-      "required": ["segmentDurationSeconds", "segmentRetentionMinutes", "arguments"],
+      "required": ["segmentDurationSeconds", "listSize", "deleteThreshold"],
       "properties": {
         "segmentDurationSeconds": { "type": "integer", "minimum": 1 },
-        "segmentRetentionMinutes": { "type": "integer", "minimum": 6 },
-        "arguments": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "type": ["string", "number"] }
-        }
-      }
+        "listSize": { "type": "integer", "minimum": 3 },
+        "deleteThreshold": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
     },
     "storage": {
       "type": "object",
