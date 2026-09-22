@@ -5,8 +5,8 @@ metadata:
   labels:
     {{- include "live-stream-packager.labels" . | nindent 4 }}
 data:
-  run-packager.sh: |
-{{ .Files.Get "scripts/run-packager.sh" | indent 4 }}
+  run-ffmpeg.sh: |
+{{ .Files.Get "scripts/run-ffmpeg.sh" | indent 4 }}
   playlist-healthcheck.sh: |
 {{ .Files.Get "scripts/playlist-healthcheck.sh" | indent 4 }}
   cubemap-input-healthcheck.sh: |

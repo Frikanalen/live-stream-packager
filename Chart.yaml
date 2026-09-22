@@ -1,6 +1,6 @@
 apiVersion: v2
 name: live-stream-packager
-description: Live stream packager using Traefik IngressRoute
+description: FFmpeg live HLS packager using Traefik IngressRoute
 type: application
 version: 0.1.1 # x-release-please-version
 appVersion: "0.1.1" # x-release-please-version

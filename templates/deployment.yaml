@@ -4,7 +4,7 @@ metadata:
   name: {{ include "live-stream-packager.fullname" . }}
   labels:
     {{- include "live-stream-packager.labels" . | nindent 4 }}
-    app.kubernetes.io/component: packager
+    app.kubernetes.io/component: origin
 spec:
   replicas: {{ .Values.replicaCount }}
   # Every pod has its own HLS origin in emptyDir. Overlapping generations can
@@ -19,7 +19,7 @@ spec:
     metadata:
       labels:
         {{- include "live-stream-packager.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: packager
+        app.kubernetes.io/component: origin
       annotations:
         checksum/nginx-config: {{ include (print $.Template.BasePath "/configmap-nginx.yaml") . | sha256sum }}
         checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
@@ -41,7 +41,7 @@ spec:
         - name: ffmpeg-transcoder
           image: {{ include "live-stream-packager.image" .Values.image.ffmpeg | quote }}
           imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
-          command: ["ffmpeg"]
+          command: ["/scripts/run-ffmpeg.sh"]
           args:
             {{- range .Values.ffmpeg.inputOptions }}
             - {{ . | quote }}
@@ -51,51 +51,42 @@ spec:
             {{- range .Values.ffmpeg.encodingOptions }}
             - {{ . | quote }}
             {{- end }}
+            - -force_key_frames:v
+            - {{ printf "expr:gte(t,n_forced*%d)" (int .Values.hls.segmentDurationSeconds) | quote }}
+            - -sc_threshold:v
+            - "0"
+            - -f
+            - hls
+            - -hls_time
+            - {{ .Values.hls.segmentDurationSeconds | quote }}
+            - -hls_list_size
+            - {{ .Values.hls.listSize | quote }}
+            - -hls_delete_threshold
+            - {{ .Values.hls.deleteThreshold | quote }}
+            - -hls_segment_type
+            - fmp4
+            - -hls_flags
+            - delete_segments+independent_segments+program_date_time+temp_file
+            - -hls_start_number_source
+            - epoch
+            - -hls_fmp4_init_filename
+            - "%v-init.mp4"
+            - -master_pl_name
+            - index.m3u8
+            - -var_stream_map
+            - "a:0,agroup:audio,default:yes,language=no,name:audio v:0,agroup:audio,name:low v:1,agroup:audio,name:high"
+            - -hls_segment_filename
+            - "/stream/%v-%d.m4s"
+            - "/stream/%v.m3u8"
           env:
+            - name: OUTPUT_DIR
+              value: /stream
             - name: PLAYLIST_PATH
               value: {{ .Values.health.mediaPlaylistPath | quote }}
             - name: PLAYLIST_MAX_AGE_SECONDS
               value: {{ .Values.health.maxAgeSeconds | quote }}
             - name: HEALTH_STATE_PATH
               value: /tmp/ffmpeg-playlist-health.state
-          volumeMounts:
-            - name: shared-data
-              mountPath: /stream
-            - name: scripts
-              mountPath: /scripts
-              readOnly: true
-          livenessProbe:
-            exec:
-              command: ["/scripts/playlist-healthcheck.sh", "live"]
-            initialDelaySeconds: 60
-            timeoutSeconds: 3
-            periodSeconds: 10
-            failureThreshold: {{ .Values.health.failureThreshold }}
-          resources:
-            {{- toYaml .Values.resources.ffmpeg | nindent 12 }}
-
-        - name: shaka-packager
-          image: {{ include "live-stream-packager.image" .Values.image.packager | quote }}
-          imagePullPolicy: {{ .Values.image.packager.pullPolicy }}
-          command: ["/scripts/run-packager.sh"]
-          args:
-            {{- range .Values.shaka.arguments }}
-            - {{ . | quote }}
-            {{- end }}
-          workingDir: /stream
-          env:
-            - name: TMPDIR
-              value: /stream
-            - name: SEGMENT_DURATION_SECONDS
-              value: {{ .Values.shaka.segmentDurationSeconds | quote }}
-            - name: SEGMENT_RETENTION_MINUTES
-              value: {{ .Values.shaka.segmentRetentionMinutes | quote }}
-            - name: PLAYLIST_PATH
-              value: {{ .Values.health.mediaPlaylistPath | quote }}
-            - name: PLAYLIST_MAX_AGE_SECONDS
-              value: {{ .Values.health.maxAgeSeconds | quote }}
-            - name: HEALTH_STATE_PATH
-              value: /tmp/packager-playlist-health.state
           volumeMounts:
             - name: shared-data
               mountPath: /stream
@@ -112,6 +103,7 @@ spec:
           livenessProbe:
             exec:
               command: ["/scripts/playlist-healthcheck.sh", "live"]
+            initialDelaySeconds: 60
             timeoutSeconds: 3
             periodSeconds: 10
             failureThreshold: {{ .Values.health.failureThreshold }}
@@ -122,7 +114,7 @@ spec:
             periodSeconds: 5
             failureThreshold: {{ .Values.health.failureThreshold }}
           resources:
-            {{- toYaml .Values.resources.packager | nindent 12 }}
+            {{- toYaml .Values.resources.ffmpeg | nindent 12 }}
 
         - name: nginx-web
           image: {{ include "live-stream-packager.image" .Values.image.nginx | quote }}

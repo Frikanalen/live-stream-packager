@@ -8,12 +8,6 @@ image:
     digest: ""
     pullPolicy: IfNotPresent
 
-  packager:
-    repository: google/shaka-packager
-    tag: v3.9.3
-    digest: ""
-    pullPolicy: IfNotPresent
-
   nginx:
     repository: nginx
     tag: 1.30.4-alpine
@@ -52,82 +46,54 @@ ffmpeg:
 
     - -map
     - 0:a:0
+    - -map
+    - "[low]"
+    - -map
+    - "[high]"
+
     - -codec:a
-    - libfdk_aac
+    - aac
     - -b:a
     - 128k
     - -ar
     - "48000"
     - -ac
     - "2"
-    - -f
-    - mpegts
-    - udp://127.0.0.1:9000
-
-    - -map
-    - "[low]"
-    - -b:v
+    - -codec:v:0
+    - libx264
+    - -b:v:0
     - 1000k
-    - -maxrate:v
+    - -maxrate:v:0
     - 1500k
-    - -bufsize:v
+    - -bufsize:v:0
     - 2000k
-    - -profile:v
+    - -profile:v:0
     - baseline
-    - -preset
+    - -preset:v:0
     - fast
-    - -tune
+    - -tune:v:0
     - zerolatency
-    - -g
-    - "100"
-    - -sc_threshold
-    - "0"
-    - -codec:v
-    - libx264
-    - -f
-    - mpegts
-    - udp://127.0.0.1:9002
 
-    - -map
-    - "[high]"
-    - -b:v
+    - -codec:v:1
+    - libx264
+    - -b:v:1
     - 4000k
-    - -maxrate:v
+    - -maxrate:v:1
     - 5000k
-    - -bufsize:v
+    - -bufsize:v:1
     - 8000k
-    - -preset
+    - -preset:v:1
     - fast
-    - -tune
+    - -tune:v:1
     - zerolatency
-    - -g
-    - "100"
-    - -sc_threshold
-    - "0"
-    - -codec:v
-    - libx264
-    - -f
-    - mpegts
-    - udp://127.0.0.1:9003
 
-# Shaka Packager configuration. The wrapper adds wall-clock-derived
-# --hls_media_sequence_number and --start_segment_number values on each start.
-shaka:
+# FFmpeg's HLS muxer writes the master playlist, media playlists, init files,
+# and fMP4 segments directly into the shared Nginx origin directory.
+hls:
   segmentDurationSeconds: 2
-  segmentRetentionMinutes: 15
-  arguments:
-    - "in=udp://0.0.0.0:9000?buffer_size=212992&timeout=15000000,stream=audio,bw=144000,init_segment=livehd-audio.mp4,segment_template=livehd-audio-$Number$.mp4,playlist_name=audio.m3u8,hls_group_id=audio,hls_name=Norwegian,language=no"
-    - "in=udp://0.0.0.0:9002?buffer_size=212992&timeout=15000000,stream=video,bw=1500000,init_segment=livehd-video-low.mp4,segment_template=livehd-video-low-$Number$.mp4,playlist_name=video-low.m3u8"
-    - "in=udp://0.0.0.0:9003?buffer_size=212992&timeout=15000000,stream=video,bw=5000000,init_segment=livehd-video-high.mp4,segment_template=livehd-video-high-$Number$.mp4,playlist_name=video-high.m3u8"
-    - --mpd_output=index.mpd
-    - --dump_stream_info
-    - --min_buffer_time=12
-    - --hls_playlist_type=LIVE
-    - --hls_master_playlist_output=index.m3u8
-    - --time_shift_buffer_depth=300
-    - --preserved_segments_outside_live_window=10
-    - --segment_duration=2
-    - --io_block_size=65536
+  # Five minutes at two seconds per segment.
+  listSize: 150
+  deleteThreshold: 10
 
 # This chart uses pod-local HLS storage. More than one replica would allow a
 # client to fetch a manifest and its segment from different origins.
@@ -138,17 +104,10 @@ resources:
     requests:
       cpu: "1"
       memory: 1Gi
+      ephemeral-storage: 256Mi
     limits:
       cpu: "6"
       memory: 2Gi
-  packager:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-      ephemeral-storage: 256Mi
-    limits:
-      cpu: "1"
-      memory: 512Mi
       ephemeral-storage: 2Gi
   nginx:
     requests:
