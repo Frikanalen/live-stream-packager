@@ -9,7 +9,8 @@ data:
   default.conf: |
     map $uri $stream_cache_control {
         default                         "public, max-age=31536000, immutable";
-        ~*\.(m3u8|mpd)$                "no-cache, no-store, must-revalidate";
+        ~*\.m3u8$                       "no-cache, no-store, must-revalidate";
+        ~*-init\.mp4$                   "no-cache, no-store, must-revalidate";
     }
 
     server {

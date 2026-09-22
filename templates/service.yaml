@@ -4,12 +4,12 @@ metadata:
   name: {{ include "live-stream-packager.fullname" . }}
   labels:
     {{- include "live-stream-packager.labels" . | nindent 4 }}
-    app.kubernetes.io/component: packager
+    app.kubernetes.io/component: origin
 spec:
   type: {{ .Values.service.type }}
   selector:
     {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: packager
+    app.kubernetes.io/component: origin
   ports:
     - name: http
       port: {{ .Values.service.port }}

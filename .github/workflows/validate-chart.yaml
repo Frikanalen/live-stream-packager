@@ -41,7 +41,8 @@ jobs:
           rendered="$RUNNER_TEMP/default.yaml"
           grep -q 'type: Recreate' "$rendered"
           grep -q 'publishNotReadyAddresses: true' "$rendered"
-          grep -q -- '--hls_media_sequence_number=' "$rendered"
+          grep -q -- '-hls_start_number_source' "$rendered"
+          grep -q 'program_date_time' "$rendered"
           grep -q 'playlist-healthcheck.sh' "$rendered"
           grep -q 'ghcr.io/frikanalen/cubemap@sha256:' "$rendered"
 
