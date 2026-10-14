@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.2.0...v0.2.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* Correct invalid language in HLS metadata (no -&gt; nor) ([44f5fea](https://github.com/Frikanalen/live-stream-packager/commit/44f5feabe755d80386fc476aa8649c3bbb43f4df))
+* route stream through public ingress ([c408be5](https://github.com/Frikanalen/live-stream-packager/commit/c408be50f989e7911103c1fb820f5ba1baa34c4b))
+
 ## [0.2.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.1.1...v0.2.0) (2026-08-21)
 
 
