@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, hotfix/0.2.x]
   workflow_dispatch:
 
 permissions:
@@ -22,6 +22,7 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v5
         with:
+          target-branch: ${{ github.ref_name }}
           # Keep manifest mode: passing release-type here would bypass the
           # extra-files entry that updates Chart.yaml.
           config-file: release-please-config.json
