@@ -146,6 +146,7 @@ service:
 # Cubemap UDP reflector: receives MPEG-TS and serves it over HTTP to FFmpeg.
 cubemap:
   enabled: true
+  hostNetwork: false
   udpPort: 5004
   httpPort: 9094
   loadBalancerIP: "192.168.3.91"

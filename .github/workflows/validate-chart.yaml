@@ -35,6 +35,13 @@ jobs:
             --set ingress.tls.enabled=false \
             > "$RUNNER_TEMP/direct-input.yaml"
 
+      - name: Render host-network Cubemap configuration
+        run: |
+          helm template stream . \
+            --namespace default \
+            --set cubemap.hostNetwork=true \
+            > "$RUNNER_TEMP/host-network.yaml"
+
       - name: Assert safety-critical rendering
         run: |
           set -euo pipefail
@@ -45,6 +52,8 @@ jobs:
           grep -q 'program_date_time' "$rendered"
           grep -q 'playlist-healthcheck.sh' "$rendered"
           grep -q 'ghcr.io/frikanalen/cubemap@sha256:' "$rendered"
+          grep -q 'hostNetwork: true' "$RUNNER_TEMP/host-network.yaml"
+          grep -q 'dnsPolicy: ClusterFirstWithHostNet' "$RUNNER_TEMP/host-network.yaml"
 
           if helm template invalid . --set replicaCount=2 > /dev/null 2>&1; then
             echo 'replicaCount=2 unexpectedly passed schema validation' >&2

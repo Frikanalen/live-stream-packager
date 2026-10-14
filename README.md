@@ -77,6 +77,8 @@ check: the master is mostly static and can outlive the media pipeline.
 - Image values accept either `tag` or `digest`; `digest` takes precedence.
 - Cubemap is pinned to the known-good deployed digest. Update that digest
   deliberately when rebuilding `docker/cubemap`.
+- Set `cubemap.hostNetwork: true` to bind Cubemap's UDP and HTTP ports on the
+  node network; ensure those ports are available on the selected node.
 - `storage.sizeLimit`, resource requests, and resource limits bound the
   otherwise pod-local live window.
 - FFmpeg creates aligned variants by forcing keyframes at the configured HLS
