@@ -194,6 +194,7 @@ cubemap:
 
 ingress:
   enabled: true
+  className: public
   host: "staging.frikanalen.no"
   pathPrefix: "/stream/"
   entryPoints:
