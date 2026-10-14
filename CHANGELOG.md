@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Frikanalen/live-stream-packager/compare/v0.2.1...v0.2.2) (2026-10-14)
+
+
+### Bug Fixes
+
+* use correct delimiter for language ([d4a9323](https://github.com/Frikanalen/live-stream-packager/commit/d4a932352a75c0ac8e7d11c45b58acff3cbb82bc))
+
 ## [0.2.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.2.0...v0.2.1) (2026-10-14)
 
 
