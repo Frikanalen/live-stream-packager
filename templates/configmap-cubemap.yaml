@@ -15,7 +15,11 @@ data:
     # Health check endpoint
     gen204 /health
 
-    # UDP input - receives MPEG-TS from external source
+    # UDP input - receives MPEG-TS from external source. Empty
+    # multicastGroup renders a plain unicast listen (src=udp://@:port); set
+    # it to join that group instead -- requires cubemap.hostNetwork, since
+    # this cluster's CNI doesn't forward multicast into a pod network
+    # namespace.
     # Serves via HTTP for ffmpeg to consume (allows reconnection during rollouts)
-    stream /stream.ts src=udp://@:{{ .Values.cubemap.udpPort }}
+    stream /stream.ts src=udp://@{{ if .Values.cubemap.multicastGroup }}{{ .Values.cubemap.multicastGroup }}{{ end }}:{{ .Values.cubemap.udpPort }}
 {{- end }}

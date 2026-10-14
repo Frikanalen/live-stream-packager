@@ -79,6 +79,9 @@ check: the master is mostly static and can outlive the media pipeline.
   deliberately when rebuilding `docker/cubemap`.
 - Set `cubemap.hostNetwork: true` to bind Cubemap's UDP and HTTP ports on the
   node network; ensure those ports are available on the selected node.
+- Set `cubemap.multicastGroup` to join a multicast group instead of listening
+  for unicast traffic on `udpPort`. Requires `cubemap.hostNetwork: true` --
+  most CNIs don't forward multicast into an ordinary pod network namespace.
 - `storage.sizeLimit`, resource requests, and resource limits bound the
   otherwise pod-local live window.
 - FFmpeg creates aligned variants by forcing keyframes at the configured HLS

@@ -74,10 +74,11 @@
     },
     "cubemap": {
       "type": "object",
-      "required": ["enabled", "hostNetwork", "udpPort", "httpPort", "loadBalancerIP", "inputMaxAgeSeconds"],
+      "required": ["enabled", "hostNetwork", "multicastGroup", "udpPort", "httpPort", "loadBalancerIP", "inputMaxAgeSeconds"],
       "properties": {
         "enabled": { "type": "boolean" },
         "hostNetwork": { "type": "boolean" },
+        "multicastGroup": { "type": "string" },
         "udpPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "httpPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "loadBalancerIP": { "type": "string", "minLength": 1 },

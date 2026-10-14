@@ -42,6 +42,14 @@ jobs:
             --set cubemap.hostNetwork=true \
             > "$RUNNER_TEMP/host-network.yaml"
 
+      - name: Render multicast Cubemap configuration
+        run: |
+          helm template stream . \
+            --namespace default \
+            --set cubemap.hostNetwork=true \
+            --set cubemap.multicastGroup=239.1.1.60 \
+            > "$RUNNER_TEMP/multicast.yaml"
+
       - name: Assert safety-critical rendering
         run: |
           set -euo pipefail
@@ -54,6 +62,8 @@ jobs:
           grep -q 'ghcr.io/frikanalen/cubemap@sha256:' "$rendered"
           grep -q 'hostNetwork: true' "$RUNNER_TEMP/host-network.yaml"
           grep -q 'dnsPolicy: ClusterFirstWithHostNet' "$RUNNER_TEMP/host-network.yaml"
+          grep -q 'src=udp://@:5004' "$rendered"
+          grep -q 'src=udp://@239.1.1.60:5004' "$RUNNER_TEMP/multicast.yaml"
 
           if helm template invalid . --set replicaCount=2 > /dev/null 2>&1; then
             echo 'replicaCount=2 unexpectedly passed schema validation' >&2

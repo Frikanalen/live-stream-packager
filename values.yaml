@@ -147,6 +147,9 @@ service:
 cubemap:
   enabled: true
   hostNetwork: false
+  # When set, Cubemap joins this multicast group instead of listening for
+  # unicast traffic on udpPort. Requires hostNetwork: true.
+  multicastGroup: ""
   udpPort: 5004
   httpPort: 9094
   loadBalancerIP: "192.168.3.91"
