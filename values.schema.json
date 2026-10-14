@@ -85,9 +85,10 @@
     },
     "ingress": {
       "type": "object",
-      "required": ["enabled", "host", "pathPrefix", "entryPoints", "tls"],
+      "required": ["enabled", "className", "host", "pathPrefix", "entryPoints", "tls"],
       "properties": {
         "enabled": { "type": "boolean" },
+        "className": { "type": "string", "minLength": 1 },
         "host": { "type": "string", "minLength": 1 },
         "pathPrefix": { "type": "string", "pattern": "^/.*\\/$" },
         "entryPoints": {

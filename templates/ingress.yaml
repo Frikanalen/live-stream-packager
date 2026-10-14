@@ -1,0 +1,38 @@
+{{- if .Values.ingress.enabled }}
+{{- $full := include "live-stream-packager.fullname" . }}
+{{- $annotations := dict }}
+{{- if .Values.ingress.entryPoints }}
+{{- $_ := set $annotations "traefik.ingress.kubernetes.io/router.entrypoints" (join "," .Values.ingress.entryPoints) }}
+{{- end }}
+{{- if and .Values.ingress.tls.enabled .Values.ingress.tls.certResolver }}
+{{- $_ := set $annotations "traefik.ingress.kubernetes.io/router.tls.certresolver" .Values.ingress.tls.certResolver }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+  {{ with $annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+  {{ end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.pathPrefix | quote }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $full }}
+                port:
+                  number: {{ .Values.service.port }}
+  {{ if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+  {{ end }}
+{{- end }}

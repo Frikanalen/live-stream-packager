@@ -81,6 +81,9 @@ check: the master is mostly static and can outlive the media pipeline.
   otherwise pod-local live window.
 - FFmpeg creates aligned variants by forcing keyframes at the configured HLS
   segment interval; this does not assume a particular input frame rate.
+- The public route is a `networking.k8s.io/v1` Ingress. The configured Traefik
+  entry points and certificate resolver are passed through as Ingress
+  annotations.
 - `nodeSelector`, `affinity`, and `tolerations` apply to both Deployments.
 
 See `values.yaml` for all options.
