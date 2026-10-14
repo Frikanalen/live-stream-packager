@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.2.2...v0.3.0) (2026-10-14)
+
+
+### Features
+
+* add multicast group support to cubemap ([e24761a](https://github.com/Frikanalen/live-stream-packager/commit/e24761afa2ef383f32a43501d451b56b91ee5580))
+
 ## [0.2.2](https://github.com/Frikanalen/live-stream-packager/compare/v0.2.1...v0.2.2) (2026-10-14)
 
 
