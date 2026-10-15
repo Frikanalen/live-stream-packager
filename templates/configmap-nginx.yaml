@@ -18,6 +18,28 @@ data:
         listen  [::]:80;
         server_name  _;
 
+        {{ if ne .Values.ingress.pathPrefix "/" }}
+        location {{ .Values.ingress.pathPrefix }} {
+            alias /usr/share/nginx/html/;
+
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Range, Origin, Accept, Content-Type' always;
+            add_header 'Cache-Control' $stream_cache_control always;
+            add_header 'X-Content-Type-Options' 'nosniff' always;
+
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'Range, Origin, Accept, Content-Type' always;
+                add_header 'Access-Control-Max-Age' 86400;
+                add_header 'Content-Length' 0;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                return 204;
+            }
+        }
+        {{ end }}
+
         location / {
             root /usr/share/nginx/html;
 

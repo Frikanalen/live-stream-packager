@@ -24,6 +24,9 @@ jobs:
       - name: Test health and entrypoint scripts
         run: sh tests/scripts-test.sh
 
+      - name: Test ingress prefix rendering
+        run: sh tests/ingress-test.sh
+
       - name: Render default configuration
         run: helm template stream . --namespace default > "$RUNNER_TEMP/default.yaml"
 
