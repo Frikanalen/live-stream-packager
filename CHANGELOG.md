@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.0...v0.3.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* serve stream files through ingress prefix ([962801b](https://github.com/Frikanalen/live-stream-packager/commit/962801b866a06c958fbfea098763f1cca141174e))
+
 ## [0.3.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.2.2...v0.3.0) (2026-10-14)
 
 
