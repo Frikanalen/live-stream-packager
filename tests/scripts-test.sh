@@ -11,35 +11,42 @@ done
 
 playlist_dir="$test_dir/playlist"
 mkdir -p "$playlist_dir"
-printf 'segment one\n' > "$playlist_dir/segment-1.mp4"
-cat > "$playlist_dir/audio.m3u8" <<'EOF'
-#EXTM3U
-#EXT-X-MEDIA-SEQUENCE:1
-#EXTINF:2.0,
-segment-1.mp4
-EOF
 
-PLAYLIST_PATH="$playlist_dir/audio.m3u8"
+# write_playlist NAME N: point NAME.m3u8 at a fresh segment NAME-N.mp4.
+write_playlist() {
+  printf 'segment %s\n' "$2" > "$playlist_dir/$1-$2.mp4"
+  printf '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:%s\n#EXTINF:2.0,\n%s-%s.mp4\n' \
+    "$2" "$1" "$2" > "$playlist_dir/$1.m3u8"
+}
+
+for rendition in audio high; do
+  write_playlist "$rendition" 1
+done
+
+PLAYLIST_PATHS="$playlist_dir/audio.m3u8 $playlist_dir/high.m3u8"
 PLAYLIST_MAX_AGE_SECONDS=30
 HEALTH_STATE_PATH="$test_dir/playlist.state"
-export PLAYLIST_PATH PLAYLIST_MAX_AGE_SECONDS HEALTH_STATE_PATH
+export PLAYLIST_PATHS PLAYLIST_MAX_AGE_SECONDS HEALTH_STATE_PATH
 
 sh "$repo_dir/scripts/playlist-healthcheck.sh" ready
 sh "$repo_dir/scripts/playlist-healthcheck.sh" live
 
-printf 'segment-1.mp4 1\n' > "$HEALTH_STATE_PATH"
+printf 'audio-1.mp4 1\n' > "$HEALTH_STATE_PATH.audio"
+printf 'high-1.mp4 1\n' > "$HEALTH_STATE_PATH.high"
 if sh "$repo_dir/scripts/playlist-healthcheck.sh" live; then
-  echo 'unchanged playlist unexpectedly passed liveness' >&2
+  echo 'unchanged playlists unexpectedly passed liveness' >&2
   exit 1
 fi
 
-printf 'segment two\n' > "$playlist_dir/segment-2.mp4"
-cat > "$playlist_dir/audio.m3u8" <<'EOF'
-#EXTM3U
-#EXT-X-MEDIA-SEQUENCE:2
-#EXTINF:2.0,
-segment-2.mp4
-EOF
+# Audio advancing alone must not hide a stalled video rendition.
+write_playlist audio 2
+if sh "$repo_dir/scripts/playlist-healthcheck.sh" live; then
+  echo 'stalled video playlist unexpectedly passed liveness' >&2
+  exit 1
+fi
+
+write_playlist audio 3
+write_playlist high 2
 sh "$repo_dir/scripts/playlist-healthcheck.sh" live
 
 snmp_file="$test_dir/snmp"

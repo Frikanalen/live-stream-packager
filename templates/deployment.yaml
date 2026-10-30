@@ -81,8 +81,8 @@ spec:
           env:
             - name: OUTPUT_DIR
               value: /stream
-            - name: PLAYLIST_PATH
-              value: {{ .Values.health.mediaPlaylistPath | quote }}
+            - name: PLAYLIST_PATHS
+              value: {{ join " " .Values.health.mediaPlaylistPaths | quote }}
             - name: PLAYLIST_MAX_AGE_SECONDS
               value: {{ .Values.health.maxAgeSeconds | quote }}
             - name: HEALTH_STATE_PATH
