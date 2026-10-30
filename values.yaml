@@ -131,10 +131,14 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# End-to-end health is based on an advancing media playlist and a non-empty
-# referenced segment, rather than process existence or a static master file.
+# End-to-end health is based on advancing media playlists and non-empty
+# referenced segments, rather than process existence or a static master file.
+# Every rendition is listed: one can stall while the others keep advancing.
 health:
-  mediaPlaylistPath: /stream/audio.m3u8
+  mediaPlaylistPaths:
+    - /stream/audio.m3u8
+    - /stream/low.m3u8
+    - /stream/high.m3u8
   maxAgeSeconds: 30
   startupFailureThreshold: 60  # 60 * 5s = 5 min max startup time
   failureThreshold: 3

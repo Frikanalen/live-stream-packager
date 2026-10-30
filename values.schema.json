@@ -64,9 +64,13 @@
     },
     "health": {
       "type": "object",
-      "required": ["mediaPlaylistPath", "maxAgeSeconds", "startupFailureThreshold", "failureThreshold"],
+      "required": ["mediaPlaylistPaths", "maxAgeSeconds", "startupFailureThreshold", "failureThreshold"],
       "properties": {
-        "mediaPlaylistPath": { "type": "string", "pattern": "^/stream/.+\\.m3u8$" },
+        "mediaPlaylistPaths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^/stream/[^ ]+\\.m3u8$" }
+        },
         "maxAgeSeconds": { "type": "integer", "minimum": 10 },
         "startupFailureThreshold": { "type": "integer", "minimum": 1 },
         "failureThreshold": { "type": "integer", "minimum": 1 }

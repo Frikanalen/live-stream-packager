@@ -31,8 +31,8 @@ The pipeline treats lack of media progress as a failure:
 - Cubemap readiness tracks incoming UDP datagrams. Its UDP Service publishes
   not-ready addresses so a returning source can restore readiness; only its
   HTTP consumer Service is withdrawn while input is stale.
-- FFmpeg liveness requires the media playlist's last segment to advance, and
-  readiness verifies that the referenced segment exists and is non-empty.
+- FFmpeg liveness requires every media playlist's last segment to advance,
+  and readiness verifies that each referenced segment exists and is non-empty.
 - An FFmpeg restart removes stale manifests before startup checks run. Media
   sequence and segment numbers start from wall-clock time instead of resetting
   to zero across restarts.
@@ -63,7 +63,7 @@ manifest is suitable for a black-box probe. At minimum, monitor:
 
 - Cubemap and origin pod readiness.
 - Container restart-count increases.
-- Age and advancement of `audio.m3u8`.
+- Age and advancement of every media playlist (`audio`, `low`, `high`).
 - HTTP success for `/stream/index.m3u8` and one referenced media segment.
 - UDP receive rate on the Cubemap pod or LoadBalancer.
 
