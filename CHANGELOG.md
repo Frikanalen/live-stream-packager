@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.1...v0.3.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* check every media playlist in the ffmpeg health probes ([#10](https://github.com/Frikanalen/live-stream-packager/issues/10)) ([8528eb8](https://github.com/Frikanalen/live-stream-packager/commit/8528eb8b08fa6da1e30e4fbc267db411d84c3c0a))
+
 ## [0.3.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.0...v0.3.1) (2026-10-15)
 
 
