@@ -43,7 +43,7 @@ If the public endpoint is unavailable, check ingress routing and ingest before
 restarting the origin:
 
 ```sh
-ssh -tA frikanalen.no ssh dev-kube-1 \
+ssh -tA frikanalen.tv ssh dev-kube-1 \
   kubectl get pods,svc,endpoints -n default \
   -l app.kubernetes.io/name=live-stream-packager
 ```
@@ -52,7 +52,7 @@ After UDP delivery is restored, a complete pipeline restart can be requested
 with:
 
 ```sh
-ssh -tA frikanalen.no ssh dev-kube-1 \
+ssh -tA frikanalen.tv ssh dev-kube-1 \
   kubectl rollout restart deployment/stream-live-stream-packager
 ```
 
