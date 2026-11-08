@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.2...v0.4.0) (2026-11-08)
+
+
+### Features
+
+* move from frikanalen.no to frikanalen.tv ([#12](https://github.com/Frikanalen/live-stream-packager/issues/12)) ([aeccdf4](https://github.com/Frikanalen/live-stream-packager/commit/aeccdf45e9ea609492b7eba7d73f3f174da4d2eb))
+
 ## [0.3.2](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.1...v0.3.2) (2026-10-30)
 
 
