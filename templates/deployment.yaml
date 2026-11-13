@@ -25,6 +25,9 @@ spec:
         checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
     spec:
       terminationGracePeriodSeconds: 30
+      {{- with .Values.priorityClass.name }}
+      priorityClassName: {{ . }}
+      {{- end }}
       volumes:
         - name: shared-data
           emptyDir:
@@ -85,6 +88,8 @@ spec:
               value: {{ join " " .Values.health.mediaPlaylistPaths | quote }}
             - name: PLAYLIST_MAX_AGE_SECONDS
               value: {{ .Values.health.maxAgeSeconds | quote }}
+            - name: PLAYLIST_MAX_SKEW_SEGMENTS
+              value: {{ .Values.health.maxSkewSegments | default 0 | quote }}
             - name: HEALTH_STATE_PATH
               value: /tmp/ffmpeg-playlist-health.state
           volumeMounts:

@@ -1,0 +1,14 @@
+{{- if and .Values.priorityClass.create .Values.priorityClass.name }}
+# Cluster-wide, but owned by this release and removed with it.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClass.name }}
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+value: {{ .Values.priorityClass.value }}
+globalDefault: false
+description: >-
+  The live stream: placed ahead of batch work such as ingest when the cluster
+  is full, because it cannot catch up on lost time the way an encode can.
+{{- end }}

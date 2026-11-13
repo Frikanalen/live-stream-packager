@@ -49,6 +49,25 @@ write_playlist audio 3
 write_playlist high 2
 sh "$repo_dir/scripts/playlist-healthcheck.sh" live
 
+# Renditions that keep advancing but drift apart -- the 2026-11-13 staging
+# outage, where audio ran hundreds of segments behind video -- fail liveness,
+# so the container restarts, which is what puts them back in step.
+write_playlist audio 4
+write_playlist high 300
+if sh "$repo_dir/scripts/playlist-healthcheck.sh" live; then
+  echo 'renditions hundreds of segments apart unexpectedly passed liveness' >&2
+  exit 1
+fi
+# Readiness does not act on it: taking the stream out of the Service would not unwedge it.
+sh "$repo_dir/scripts/playlist-healthcheck.sh" ready
+# A small, normal gap passes, and the check can be turned off.
+write_playlist audio 5
+write_playlist high 7
+sh "$repo_dir/scripts/playlist-healthcheck.sh" live
+write_playlist audio 6
+write_playlist high 400
+PLAYLIST_MAX_SKEW_SEGMENTS=0 sh "$repo_dir/scripts/playlist-healthcheck.sh" live
+
 snmp_file="$test_dir/snmp"
 cubemap_state="$test_dir/cubemap.state"
 cat > "$snmp_file" <<'EOF'

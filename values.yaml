@@ -99,10 +99,15 @@ hls:
 # client to fetch a manifest and its segment from different origins.
 replicaCount: 1
 
+# The two x264 encodes use about five cores. The request is what the stream is
+# guaranteed when a node is contended -- CPU is shared out by request -- so it
+# has to cover that: on 2026-11-13 staging asked for one core, an ingest worker
+# beside it asked for two and took the rest, the packager got about a third of
+# the node and its timestamps came apart.
 resources:
   ffmpeg:
     requests:
-      cpu: "1"
+      cpu: "5"
       memory: 1Gi
       ephemeral-storage: 256Mi
     limits:
@@ -116,12 +121,15 @@ resources:
     limits:
       cpu: 250m
       memory: 128Mi
+  # Cubemap reads the programme feed as UDP: if it is starved, datagrams are
+  # dropped and the transcoder gets corrupt input. It uses little, but has to
+  # get it when it needs it.
   cubemap:
     requests:
-      cpu: 25m
+      cpu: 200m
       memory: 64Mi
     limits:
-      cpu: 500m
+      cpu: "1"
       memory: 256Mi
 
 storage:
@@ -130,6 +138,26 @@ storage:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Scheduling priority for the packager and Cubemap, so that on a full cluster
+# the live stream is placed ahead of (and may preempt) batch work such as
+# ingest. With create, the chart makes the cluster-wide PriorityClass itself;
+# set create: false to use one that already exists, or name: "" for none.
+priorityClass:
+  create: true
+  name: stream-critical
+  value: 1000000
+
+# Alerts for kube-prometheus-stack. Off unless the cluster runs the
+# PrometheusRule CRD.
+monitoring:
+  prometheusRule:
+    enabled: false
+    # Restarts within the window that mean the stream is unwell. The liveness
+    # check restarts a wedged transcoder, so a wedge shows up here.
+    restartsWithin15m: 2
+    # Share of CPU periods throttled before the stream is called starved.
+    throttledRatio: 0.25
 
 # End-to-end health is based on advancing media playlists and non-empty
 # referenced segments, rather than process existence or a static master file.
@@ -140,6 +168,9 @@ health:
     - /stream/low.m3u8
     - /stream/high.m3u8
   maxAgeSeconds: 30
+  # How many segments apart the renditions' newest segments may be before
+  # liveness fails and the transcoder is restarted. 0 turns it off.
+  maxSkewSegments: 5
   startupFailureThreshold: 60  # 60 * 5s = 5 min max startup time
   failureThreshold: 3
 

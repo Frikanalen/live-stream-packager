@@ -72,6 +72,7 @@
           "items": { "type": "string", "pattern": "^/stream/[^ ]+\\.m3u8$" }
         },
         "maxAgeSeconds": { "type": "integer", "minimum": 10 },
+        "maxSkewSegments": { "type": "integer", "minimum": 0 },
         "startupFailureThreshold": { "type": "integer", "minimum": 1 },
         "failureThreshold": { "type": "integer", "minimum": 1 }
       }

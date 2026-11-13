@@ -23,6 +23,9 @@ spec:
         checksum/cubemap-config: {{ include (print $.Template.BasePath "/configmap-cubemap.yaml") . | sha256sum }}
         checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
     spec:
+      {{- with .Values.priorityClass.name }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- if .Values.cubemap.hostNetwork }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

@@ -1,0 +1,44 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+{{- $fullname := include "live-stream-packager.fullname" . }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: live-stream-packager
+      rules:
+        # The liveness check restarts a transcoder whose renditions have come
+        # apart or stopped, so a wedged stream surfaces here rather than
+        # nowhere. One restart is a blip the probe fixed; repeated ones mean
+        # the cause is still there (starved CPU, a broken programme feed).
+        - alert: LiveStreamPackagerRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}",pod=~"{{ $fullname }}-.*"}[15m]) >= {{ .Values.monitoring.prometheusRule.restartsWithin15m }}
+          labels:
+            severity: warning
+          annotations:
+            summary: Live stream {{ "{{ $labels.container }}" }} has restarted repeatedly
+            description: >-
+              {{ "{{ $labels.pod }}" }}/{{ "{{ $labels.container }}" }} restarted
+              {{ "{{ $value | humanize }}" }} times in 15 minutes. Check its log for
+              corrupt input or "out of step", and the node for CPU contention.
+        # CPU starvation is what broke the staging stream on 2026-11-13: an
+        # encode beside it took the node, and x264 fell behind real time.
+        - alert: LiveStreamPackagerCPUThrottled
+          expr: |
+            sum by (pod, container) (rate(container_cpu_cfs_throttled_periods_total{namespace="{{ .Release.Namespace }}",pod=~"{{ $fullname }}-.*",container!=""}[5m]))
+              /
+            sum by (pod, container) (rate(container_cpu_cfs_periods_total{namespace="{{ .Release.Namespace }}",pod=~"{{ $fullname }}-.*",container!=""}[5m]))
+              > {{ .Values.monitoring.prometheusRule.throttledRatio }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Live stream {{ "{{ $labels.container }}" }} is CPU-throttled
+            description: >-
+              {{ "{{ $labels.pod }}" }}/{{ "{{ $labels.container }}" }} was throttled in
+              {{ "{{ $value | humanizePercentage }}" }} of CPU periods for 10 minutes.
+              It cannot keep up with real time like this; raise its CPU limit.
+{{- end }}

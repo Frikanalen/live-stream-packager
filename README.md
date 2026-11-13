@@ -33,6 +33,13 @@ The pipeline treats lack of media progress as a failure:
   HTTP consumer Service is withdrawn while input is stale.
 - FFmpeg liveness requires every media playlist's last segment to advance,
   and readiness verifies that each referenced segment exists and is non-empty.
+- Liveness also fails when the renditions' newest segments are more than
+  `health.maxSkewSegments` apart. Renditions that keep advancing out of step
+  cannot be played by any player, and a restart is what brings them back.
+- The transcoder requests the CPU its two x264 encodes actually use, and both
+  it and Cubemap run at the `stream-critical` priority, so batch work beside
+  them cannot starve them. `monitoring.prometheusRule.enabled` adds alerts for
+  repeated restarts and CPU throttling.
 - An FFmpeg restart removes stale manifests before startup checks run. Media
   sequence and segment numbers start from wall-clock time instead of resetting
   to zero across restarts.
