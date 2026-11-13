@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.4.0...v0.4.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* keep the stream from wedging under CPU contention, and restart it if it does ([#14](https://github.com/Frikanalen/live-stream-packager/issues/14)) ([d74b069](https://github.com/Frikanalen/live-stream-packager/commit/d74b069eb3f1b60f55b0eb2d1c60c50935fbcdab))
+
 ## [0.4.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.2...v0.4.0) (2026-11-08)
 
 
