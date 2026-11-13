@@ -85,6 +85,10 @@ spec:
               value: {{ join " " .Values.health.mediaPlaylistPaths | quote }}
             - name: PLAYLIST_MAX_AGE_SECONDS
               value: {{ .Values.health.maxAgeSeconds | quote }}
+            - name: PLAYLIST_MAX_SKEW_SECONDS
+              value: {{ .Values.health.maxSkewSeconds | quote }}
+            - name: PLAYLIST_MAX_LAG_SECONDS
+              value: {{ .Values.health.maxLagSeconds | quote }}
             - name: HEALTH_STATE_PATH
               value: /tmp/ffmpeg-playlist-health.state
           volumeMounts:
@@ -145,6 +149,9 @@ spec:
           resources:
             {{- toYaml .Values.resources.nginx | nindent 12 }}
 
+      {{- with .Values.priorityClass.name }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

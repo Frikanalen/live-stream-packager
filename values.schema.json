@@ -72,8 +72,19 @@
           "items": { "type": "string", "pattern": "^/stream/[^ ]+\\.m3u8$" }
         },
         "maxAgeSeconds": { "type": "integer", "minimum": 10 },
+        "maxSkewSeconds": { "type": "number", "minimum": 0 },
+        "maxLagSeconds": { "type": "number", "minimum": 10 },
         "startupFailureThreshold": { "type": "integer", "minimum": 1 },
         "failureThreshold": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "priorityClass": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "create": { "type": "boolean" },
+        "value": { "type": "integer", "minimum": 0, "maximum": 1000000000 },
+        "description": { "type": "string" }
       }
     },
     "cubemap": {

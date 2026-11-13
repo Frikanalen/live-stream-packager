@@ -33,6 +33,12 @@ The pipeline treats lack of media progress as a failure:
   HTTP consumer Service is withdrawn while input is stale.
 - FFmpeg liveness requires every media playlist's last segment to advance,
   and readiness verifies that each referenced segment exists and is non-empty.
+- Liveness also requires the renditions to agree: the newest segments of
+  `audio`, `low` and `high` (by `EXT-X-PROGRAM-DATE-TIME`) must end within
+  `health.maxSkewSeconds` of each other and within `health.maxLagSeconds` of
+  the clock. Playlists that all advance can still be unplayable: on
+  2026-11-13 a CPU-starved FFmpeg kept audio ~16 minutes behind video for ten
+  hours while every freshness check passed.
 - An FFmpeg restart removes stale manifests before startup checks run. Media
   sequence and segment numbers start from wall-clock time instead of resetting
   to zero across restarts.
@@ -63,12 +69,23 @@ manifest is suitable for a black-box probe. At minimum, monitor:
 
 - Cubemap and origin pod readiness.
 - Container restart-count increases.
-- Age and advancement of every media playlist (`audio`, `low`, `high`).
+- Age and advancement of every media playlist (`audio`, `low`, `high`), and
+  that their program date times agree with each other and with the clock
+  (Frikanalen/stream-monitoring probes the public playlists for this).
 - HTTP success for `/stream/index.m3u8` and one referenced media segment.
 - UDP receive rate on the Cubemap pod or LoadBalancer.
 
 A `200` response for only the master playlist is not a sufficient health
 check: the master is mostly static and can outlive the media pipeline.
+
+## Resources and placement
+
+Under CPU contention the kernel shares a node's cores in proportion to each
+container's CPU *request*; a limit only caps. FFmpeg therefore requests what
+the two encodes actually use (about five cores at 720p50), and Cubemap
+requests enough to drain its UDP socket promptly. Set `priorityClass.name`
+(and `priorityClass.create` from one release) so the stream is scheduled
+ahead of batch work such as ingest transcodes when a node is full.
 
 ## Configuration notes
 
