@@ -67,6 +67,14 @@ jobs:
           grep -q 'dnsPolicy: ClusterFirstWithHostNet' "$RUNNER_TEMP/host-network.yaml"
           grep -q 'src=udp://@:5004' "$rendered"
           grep -q 'src=udp://@239.1.1.60:5004' "$RUNNER_TEMP/multicast.yaml"
+          grep -q 'name: PLAYLIST_MAX_SKEW_SECONDS' "$rendered"
+          grep -q 'name: PLAYLIST_MAX_LAG_SECONDS' "$rendered"
+          ! grep -q 'priorityClassName' "$rendered"
+          helm template stream . --namespace default \
+            --set priorityClass.name=stream-critical \
+            --set priorityClass.create=true > "$RUNNER_TEMP/priority.yaml"
+          [ "$(grep -c 'priorityClassName: stream-critical' "$RUNNER_TEMP/priority.yaml")" -eq 2 ]
+          grep -q 'kind: PriorityClass' "$RUNNER_TEMP/priority.yaml"
 
           if helm template invalid . --set replicaCount=2 > /dev/null 2>&1; then
             echo 'replicaCount=2 unexpectedly passed schema validation' >&2

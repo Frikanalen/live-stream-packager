@@ -1,0 +1,12 @@
+{{- if and .Values.priorityClass.create .Values.priorityClass.name }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClass.name }}
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+value: {{ int .Values.priorityClass.value }}
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: {{ .Values.priorityClass.description | quote }}
+{{- end }}
