@@ -166,9 +166,13 @@ health:
   # EXT-X-PROGRAM-DATE-TIME) end more than maxSkewSeconds apart, or when the
   # newest ends more than maxLagSeconds away from the clock. Every playlist
   # still advancing does not mean a player can use them: see
-  # scripts/playlist-healthcheck.sh.
+  # scripts/playlist-healthcheck.sh. The lag allowance is wide on purpose:
+  # the wedge it exists for was 79 minutes, while a healthy origin's program
+  # date times sit a few seconds ahead of the clock (measured -1 to -5 s on
+  # staging and prod on 2026-11-13, prod after 12 h of uptime), and a slow
+  # clock drift must not turn into periodic restarts.
   maxSkewSeconds: 6
-  maxLagSeconds: 120
+  maxLagSeconds: 300
   startupFailureThreshold: 60  # 60 * 5s = 5 min max startup time
   failureThreshold: 3
 
