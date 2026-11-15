@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.4.0...v0.4.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* keep the stream from wedging under CPU contention, and restart it if it does ([#14](https://github.com/Frikanalen/live-stream-packager/issues/14)) ([d74b069](https://github.com/Frikanalen/live-stream-packager/commit/d74b069eb3f1b60f55b0eb2d1c60c50935fbcdab))
+* never rotate the picture on a display-orientation SEI ([#16](https://github.com/Frikanalen/live-stream-packager/issues/16)) ([c6b9b79](https://github.com/Frikanalen/live-stream-packager/commit/c6b9b7964c3f25b51e3206bf0fdcc17222982165))
+
 ## [0.4.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.3.2...v0.4.0) (2026-11-08)
 
 
