@@ -38,6 +38,11 @@ ffmpeg:
     - "15000000"
     - -probesize
     - 100M
+    # The picture from CasparCG is always upright. Without this, a single
+    # display-orientation SEI in the input (a UDP loss can corrupt another
+    # SEI into one) makes ffmpeg rotate every frame from then on, until the
+    # process restarts.
+    - -noautorotate
   encodingOptions:
     - -pix_fmt
     - yuv420p
