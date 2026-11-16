@@ -100,9 +100,26 @@ hls:
   listSize: 150
   deleteThreshold: 10
 
-# This chart uses pod-local HLS storage. More than one replica would allow a
-# client to fetch a manifest and its segment from different origins.
-replicaCount: 1
+# Each origin pod has its own HLS output in emptyDir, so a viewer must keep
+# fetching manifests and segments from the same pod: the Service sets a
+# Traefik sticky cookie (highAvailability.stickyCookie). Two origins on
+# different nodes mean a pod or node going away costs its viewers one
+# rebuffer onto the other origin, not an outage. Segment numbers come from
+# the wall clock (-hls_start_number_source epoch), so both origins name
+# their segments alike.
+replicaCount: 2
+
+highAvailability:
+  # Run at most one origin and one Cubemap per node, and each origin beside
+  # a Cubemap that it reads over the node-local Service, so losing a node
+  # takes out one origin/Cubemap pair and the other keeps the stream going.
+  spreadAcrossNodes: true
+  # Keep at least one origin and one Cubemap through voluntary disruptions
+  # (drains), when there is more than one of each.
+  podDisruptionBudget: true
+  stickyCookie:
+    enabled: true
+    name: fk_stream
 
 # CPU requests are what a container is guaranteed when its node is contended:
 # under contention the kernel shares CPU in proportion to requests, and a
@@ -188,6 +205,10 @@ service:
 # Cubemap UDP reflector: receives MPEG-TS and serves it over HTTP to FFmpeg.
 cubemap:
   enabled: true
+  # One per node (see highAvailability). With hostNetwork and a multicast
+  # group every replica joins the group itself; with the UDP LoadBalancer
+  # only one receives and the others stay unready.
+  replicaCount: 2
   hostNetwork: false
   # When set, Cubemap joins this multicast group instead of listening for
   # unicast traffic on udpPort. Requires hostNetwork: true.
