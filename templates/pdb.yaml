@@ -1,0 +1,33 @@
+{{- if .Values.highAvailability.podDisruptionBudget }}
+{{- if gt (int .Values.replicaCount) 1 }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: origin
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "live-stream-packager.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: origin
+{{- end }}
+{{- if and .Values.cubemap.enabled (gt (int .Values.cubemap.replicaCount) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}-cubemap
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubemap
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "live-stream-packager.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: cubemap
+{{- end }}
+{{- end }}

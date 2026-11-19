@@ -17,10 +17,18 @@ origin rollout does not require the source to reconnect. Set
 `cubemap.enabled=false` and `ffmpeg.inputSourceUrl` to use a direct FFmpeg
 input instead.
 
-The HLS output is pod-local. The chart therefore enforces one replica and uses
-a `Recreate` Deployment strategy. Scaling it requires shared origin storage or
-request routing that guarantees a playlist and all of its segments come from
-the same origin generation.
+The HLS output is pod-local, so a viewer must fetch a playlist and its
+segments from the same origin. By default the chart runs two origins and two
+Cubemaps, one of each per node (`highAvailability.spreadAcrossNodes`), each
+origin reading the Cubemap on its own node over the node-local Service. The
+origin Service sets a Traefik sticky cookie (`highAvailability.stickyCookie`)
+that keeps a viewer on one origin; if that origin or its node goes away,
+Traefik moves the viewer to the other one, which costs one rebuffer instead
+of an outage. PodDisruptionBudgets keep one of each through drains, and
+rollouts replace one pod at a time. Segment numbers come from the wall clock,
+so both origins name their segments alike. `replicaCount: 1` and
+`cubemap.replicaCount: 1` restore the old single-origin, `Recreate`
+behaviour.
 
 ## Failure recovery
 

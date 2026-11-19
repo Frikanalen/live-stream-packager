@@ -7,10 +7,17 @@ metadata:
     app.kubernetes.io/component: origin
 spec:
   replicas: {{ .Values.replicaCount }}
-  # Every pod has its own HLS origin in emptyDir. Overlapping generations can
-  # serve a manifest from one origin and a segment from another.
+  # Every pod has its own HLS origin in emptyDir; the sticky cookie keeps a
+  # viewer on one. With one replica, never run two generations at once.
   strategy:
+    {{- if gt (int .Values.replicaCount) 1 }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    {{- else }}
     type: Recreate
+    {{- end }}
   selector:
     matchLabels:
       {{- include "live-stream-packager.selectorLabels" . | nindent 6 }}
@@ -156,9 +163,9 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with include "live-stream-packager.affinity" (list . "origin") }}
       affinity:
-        {{- toYaml . | nindent 8 }}
+        {{- . | nindent 8 }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
