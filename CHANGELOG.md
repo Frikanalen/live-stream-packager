@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/Frikanalen/live-stream-packager/compare/v0.4.1...v0.4.2) (2026-11-19)
+
+
+### Bug Fixes
+
+* update nginx to 1.30.7 (nginx2root CVEs) ([#18](https://github.com/Frikanalen/live-stream-packager/issues/18)) ([48c0cb0](https://github.com/Frikanalen/live-stream-packager/commit/48c0cb0f572c0bbd74e16e6bd493a7c7438eafca))
+
 ## [0.4.1](https://github.com/Frikanalen/live-stream-packager/compare/v0.4.0...v0.4.1) (2026-11-15)
 
 
