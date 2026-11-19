@@ -10,7 +10,7 @@ image:
 
   nginx:
     repository: nginx
-    tag: 1.30.4-alpine
+    tag: 1.30.7-alpine
     digest: ""
     pullPolicy: IfNotPresent
 
