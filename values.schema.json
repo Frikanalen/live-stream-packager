@@ -87,6 +87,47 @@
         "description": { "type": "string" }
       }
     },
+    "airlog": {
+      "type": "object",
+      "required": ["enabled", "segmentSeconds", "retentionDays", "uid", "video", "audio", "storage"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "inputUrl": { "type": "string" },
+        "segmentSeconds": { "type": "integer", "minimum": 2, "maximum": 60 },
+        "retentionDays": { "type": "integer", "minimum": 1, "maximum": 31 },
+        "uid": { "type": "integer", "minimum": 1 },
+        "video": {
+          "type": "object",
+          "required": ["height", "fps", "bitrate"],
+          "properties": {
+            "height": { "type": "integer", "minimum": 144, "maximum": 1080 },
+            "fps": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "bitrate": { "type": "string", "pattern": "^[0-9]+[kM]$" }
+          }
+        },
+        "audio": {
+          "type": "object",
+          "required": ["bitrate", "channels"],
+          "properties": {
+            "bitrate": { "type": "string", "pattern": "^[0-9]+k$" },
+            "channels": { "enum": [1, 2] }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "existingClaim": { "type": "string" },
+            "nfs": {
+              "type": "object",
+              "properties": {
+                "server": { "type": "string" },
+                "path": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
     "cubemap": {
       "type": "object",
       "required": ["enabled", "hostNetwork", "multicastGroup", "udpPort", "httpPort", "loadBalancerIP", "inputMaxAgeSeconds"],

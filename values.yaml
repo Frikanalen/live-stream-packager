@@ -207,3 +207,50 @@ ingress:
   tls:
     enabled: true
     certResolver: letsencrypt
+
+# Air log: a week of what the stream carried, at low quality, for staff to
+# look back at (Django's airlog app lists and plays the segments). 360p25
+# 400k + 64k mono AAC comes to about 0.5 Mbit/s, roughly 38 GB a week.
+# Segments are self-contained MPEG-TS named by their UTC start time,
+# <storage>/YYYY-MM-DD/HH/YYYYMMDDTHHMMSSZ.ts; the janitor deletes them after
+# retentionDays. The storage is shared with Django, which mounts it
+# read-only: an NFS export (infra roles/air_log_storage) or a claim.
+airlog:
+  enabled: false
+  # Empty: read Cubemap (or ffmpeg.inputSourceUrl) like the origin does.
+  inputUrl: ""
+  segmentSeconds: 10
+  retentionDays: 7
+  # Owns the files. The NFS export squashes every client to this id.
+  uid: 2050
+  video:
+    height: 360
+    fps: 25
+    bitrate: 400k
+  audio:
+    bitrate: 64k
+    channels: 1
+  storage:
+    existingClaim: ""
+    nfs:
+      server: ""
+      path: ""
+  # One 360p25 veryfast encode uses about half a core.
+  resources:
+    recorder:
+      requests:
+        cpu: "1"
+        memory: 256Mi
+      limits:
+        cpu: "2"
+        memory: 512Mi
+    janitor:
+      requests:
+        cpu: 5m
+        memory: 16Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []

@@ -76,6 +76,23 @@ jobs:
           [ "$(grep -c 'priorityClassName: stream-critical' "$RUNNER_TEMP/priority.yaml")" -eq 2 ]
           grep -q 'kind: PriorityClass' "$RUNNER_TEMP/priority.yaml"
 
+          # The air log is off by default, needs storage when on, and never
+          # touches the origin's scripts (whose checksum restarts the stream).
+          ! grep -q 'component: airlog' "$rendered"
+          if helm template airlog . --set airlog.enabled=true > /dev/null 2>&1; then
+            echo 'airlog without storage unexpectedly rendered' >&2
+            exit 1
+          fi
+          helm template stream . --namespace default \
+            --set airlog.enabled=true \
+            --set airlog.storage.nfs.server=file01 \
+            --set airlog.storage.nfs.path=/archive/airlog > "$RUNNER_TEMP/airlog.yaml"
+          grep -q 'run-airlog.sh' "$RUNNER_TEMP/airlog.yaml"
+          grep -q 'path: "/archive/airlog"' "$RUNNER_TEMP/airlog.yaml"
+          for checksum in $(grep 'checksum/scripts: ' "$rendered" | awk '{ print $2 }'); do
+            grep -q "checksum/scripts: $checksum" "$RUNNER_TEMP/airlog.yaml"
+          done
+
           if helm template invalid . --set replicaCount=2 > /dev/null 2>&1; then
             echo 'replicaCount=2 unexpectedly passed schema validation' >&2
             exit 1

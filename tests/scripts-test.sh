@@ -153,3 +153,26 @@ grep -q '^-hls_start_number_source$' "$FFMPEG_ARGS_FILE"
 grep -q '^epoch$' "$FFMPEG_ARGS_FILE"
 
 echo 'script tests passed'
+
+# Air log janitor: deletes segments past the retention and the folders they
+# leave empty, keeps recent ones.
+airlog_dir="$test_dir/airlog"
+mkdir -p "$airlog_dir/2026-11-01/10" "$airlog_dir/2026-11-25/16"
+old="$airlog_dir/2026-11-01/10/20261101T100000Z.ts"
+new="$airlog_dir/2026-11-25/16/20261125T160000Z.ts"
+: > "$old"
+: > "$new"
+touch -d '@'"$(( $(date +%s) - 9 * 86400 ))" "$old"
+AIRLOG_DIR="$airlog_dir" AIRLOG_RETENTION_DAYS=7 sh "$repo_dir/scripts/airlog-janitor.sh" once
+[ ! -e "$old" ] || { echo 'janitor kept an expired segment' >&2; exit 1; }
+[ ! -d "$airlog_dir/2026-11-01" ] || { echo 'janitor kept an empty day folder' >&2; exit 1; }
+[ -e "$new" ] || { echo 'janitor deleted a recent segment' >&2; exit 1; }
+
+# Air log liveness follows live.m3u8's age.
+printf '#EXTM3U\n' > "$airlog_dir/live.m3u8"
+AIRLOG_DIR="$airlog_dir" sh "$repo_dir/scripts/airlog-healthcheck.sh"
+touch -d '@'"$(( $(date +%s) - 300 ))" "$airlog_dir/live.m3u8"
+if AIRLOG_DIR="$airlog_dir" AIRLOG_MAX_AGE_SECONDS=60 sh "$repo_dir/scripts/airlog-healthcheck.sh" 2>/dev/null; then
+  echo 'stale air log playlist unexpectedly passed liveness' >&2
+  exit 1
+fi

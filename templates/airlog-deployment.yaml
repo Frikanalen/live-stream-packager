@@ -1,0 +1,126 @@
+{{- if .Values.airlog.enabled }}
+{{- $storage := .Values.airlog.storage }}
+{{- if not (or $storage.existingClaim $storage.nfs.server) }}
+{{- fail "airlog.enabled needs airlog.storage.nfs (server, path) or airlog.storage.existingClaim" }}
+{{- end }}
+# Air log: a low-quality week of what the stream carried, for staff to look
+# back at (Django's airlog app lists and serves the segments). Its own pod,
+# reading Cubemap like the origin does, so the log keeps recording when the
+# origin's transcoder has trouble -- that is when it is most wanted.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "live-stream-packager.fullname" . }}-airlog
+  labels:
+    {{- include "live-stream-packager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: airlog
+spec:
+  replicas: 1
+  # Two recorders would write the same segment names.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "live-stream-packager.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: airlog
+  template:
+    metadata:
+      labels:
+        {{- include "live-stream-packager.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: airlog
+      annotations:
+        checksum/scripts: {{ include (print $.Template.BasePath "/airlog-configmap.yaml") . | sha256sum }}
+    spec:
+      terminationGracePeriodSeconds: 15
+      securityContext:
+        runAsUser: {{ .Values.airlog.uid }}
+        runAsGroup: {{ .Values.airlog.uid }}
+        runAsNonRoot: true
+      volumes:
+        - name: airlog
+          {{- if $storage.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ $storage.existingClaim }}
+          {{- else }}
+          nfs:
+            server: {{ $storage.nfs.server | quote }}
+            path: {{ $storage.nfs.path | quote }}
+          {{- end }}
+        - name: scripts
+          configMap:
+            name: {{ include "live-stream-packager.fullname" . }}-airlog-scripts
+            defaultMode: 0555
+      containers:
+        - name: recorder
+          image: {{ include "live-stream-packager.image" .Values.image.ffmpeg | quote }}
+          imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
+          command: ["/scripts/run-airlog.sh"]
+          env:
+            - name: AIRLOG_DIR
+              value: /airlog
+            - name: AIRLOG_INPUT_URL
+              value: {{ .Values.airlog.inputUrl | default (include "live-stream-packager.ffmpegInputUrl" .) | quote }}
+            - name: AIRLOG_SEGMENT_SECONDS
+              value: {{ .Values.airlog.segmentSeconds | quote }}
+            - name: AIRLOG_VIDEO_HEIGHT
+              value: {{ .Values.airlog.video.height | quote }}
+            - name: AIRLOG_VIDEO_FPS
+              value: {{ .Values.airlog.video.fps | quote }}
+            - name: AIRLOG_VIDEO_BITRATE
+              value: {{ .Values.airlog.video.bitrate | quote }}
+            - name: AIRLOG_AUDIO_BITRATE
+              value: {{ .Values.airlog.audio.bitrate | quote }}
+            - name: AIRLOG_AUDIO_CHANNELS
+              value: {{ .Values.airlog.audio.channels | quote }}
+            - name: AIRLOG_MAX_AGE_SECONDS
+              value: {{ mul 6 (int .Values.airlog.segmentSeconds) | quote }}
+          volumeMounts:
+            - name: airlog
+              mountPath: /airlog
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+          startupProbe:
+            exec:
+              command: ["/scripts/airlog-healthcheck.sh"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
+          livenessProbe:
+            exec:
+              command: ["/scripts/airlog-healthcheck.sh"]
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.airlog.resources.recorder | nindent 12 }}
+        - name: janitor
+          image: {{ include "live-stream-packager.image" .Values.image.ffmpeg | quote }}
+          imagePullPolicy: {{ .Values.image.ffmpeg.pullPolicy }}
+          command: ["/scripts/airlog-janitor.sh"]
+          env:
+            - name: AIRLOG_DIR
+              value: /airlog
+            - name: AIRLOG_RETENTION_DAYS
+              value: {{ .Values.airlog.retentionDays | quote }}
+          volumeMounts:
+            - name: airlog
+              mountPath: /airlog
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+          resources:
+            {{- toYaml .Values.airlog.resources.janitor | nindent 12 }}
+      {{- with .Values.airlog.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.airlog.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.airlog.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
