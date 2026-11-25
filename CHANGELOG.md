@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Frikanalen/live-stream-packager/compare/v0.4.2...v0.5.0) (2026-11-25)
+
+
+### Features
+
+* optional air log recorder, a week of low-quality segments for staff ([#20](https://github.com/Frikanalen/live-stream-packager/issues/20)) ([45f4b1b](https://github.com/Frikanalen/live-stream-packager/commit/45f4b1b47a83b4e09aaedb7f7ab124fb030cd666))
+
 ## [0.4.2](https://github.com/Frikanalen/live-stream-packager/compare/v0.4.1...v0.4.2) (2026-11-19)
 
 
