@@ -43,3 +43,33 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- .Values.ffmpeg.inputSourceUrl -}}
 {{- end -}}
 {{- end }}
+
+{{/*
+Pod affinity for a component. User-set .Values.affinity wins; otherwise, with
+highAvailability.spreadAcrossNodes, at most one pod of the component per node,
+and (for the origin) only on a node that runs a Cubemap.
+*/}}
+{{- define "live-stream-packager.affinity" -}}
+{{- $root := index . 0 -}}
+{{- $component := index . 1 -}}
+{{- if $root.Values.affinity -}}
+{{ toYaml $root.Values.affinity }}
+{{- else if $root.Values.highAvailability.spreadAcrossNodes -}}
+podAntiAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+    - topologyKey: kubernetes.io/hostname
+      labelSelector:
+        matchLabels:
+          {{- include "live-stream-packager.selectorLabels" $root | nindent 10 }}
+          app.kubernetes.io/component: {{ $component }}
+{{- if and (eq $component "origin") $root.Values.cubemap.enabled }}
+podAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+    - topologyKey: kubernetes.io/hostname
+      labelSelector:
+        matchLabels:
+          {{- include "live-stream-packager.selectorLabels" $root | nindent 10 }}
+          app.kubernetes.io/component: cubemap
+{{- end }}
+{{- end -}}
+{{- end }}

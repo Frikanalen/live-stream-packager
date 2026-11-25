@@ -9,6 +9,11 @@ metadata:
     app.kubernetes.io/component: cubemap
 spec:
   type: ClusterIP
+  {{- if .Values.highAvailability.spreadAcrossNodes }}
+  # Each origin reads the Cubemap on its own node, so the two origin/Cubemap
+  # pairs fail independently.
+  internalTrafficPolicy: Local
+  {{- end }}
   selector:
     {{- include "live-stream-packager.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: cubemap
