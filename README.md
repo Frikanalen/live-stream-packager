@@ -62,6 +62,28 @@ ssh -tA frikanalen.tv ssh dev-kube-1 \
   kubectl rollout restart deployment/stream-live-stream-packager
 ```
 
+## Air log
+
+`airlog.enabled` adds a recorder that keeps a week of what the stream
+carried at low quality, for staff to look back at (Django's `airlog` app
+lists the segments and the frontend's staff page plays them). It is its own
+Deployment reading Cubemap, like the origin, so it keeps recording when the
+origin's transcoder has trouble, and changing it never restarts the origin.
+
+- 360p25 H.264 400k + 64k mono AAC by default: about 0.5 Mbit/s, roughly
+  38 GB a week, about half a core.
+- Self-contained 10-second MPEG-TS segments named by their UTC start time:
+  `YYYY-MM-DD/HH/YYYYMMDDTHHMMSSZ.ts`. A segment gets its final name only
+  once complete, so the newest listed one is at most a segment behind live.
+  The name is the wall clock when the segment began, so it trails the
+  picture by the encoder's latency (a second or two).
+- A janitor container deletes segments after `airlog.retentionDays` (7).
+- Storage is an NFS export (`airlog.storage.nfs`) shared with Django, which
+  mounts it read-only; infra's `air_log_storage` role makes the ZFS dataset
+  (with a quota) and the export, squashing clients to `airlog.uid`.
+- Liveness fails when `live.m3u8` (rewritten after every segment) is older
+  than six segments, which restarts the recorder.
+
 ## Monitoring
 
 The Kubernetes readiness state is suitable for alerting and the public
